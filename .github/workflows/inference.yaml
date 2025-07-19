@@ -1,0 +1,75 @@
+name: Inference Pipeline
+
+on:
+  push:
+    branches: [ inference_branch ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run Tests
+        env:
+          PYTHONPATH: .
+        run: pytest tests/test_train.py
+
+  train:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Training
+        run: python src/train.py
+
+      - name: Upload Model
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: model_train.pkl
+
+  inference:
+    runs-on: ubuntu-latest
+    needs: train
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download Model
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: .
+
+      - name: Run Inference
+        run: python src/inference.py
